@@ -6,10 +6,12 @@ use reqwest::{Client, Response, header::CONTENT_TYPE};
 use serde::Serialize;
 use serde_json::Value;
 
-/// 利用者からモデルを変更できないよう、上流モデルを固定します。
-const MODEL: &str = "grok-4.3-fast";
+/// 利用者からモデルを変更できないよう、各検索機能の上流モデルを固定します。
+const FAST_MODEL: &str = "grok-4.3-fast";
+const DEEP_MODEL: &str = "grok-4.20-multi-agent-xhigh";
 /// 上流モデルへの固定指示は英語で記述し、利用者の入力言語で回答させます。
-const INSTRUCTIONS: &str = "You are a web search assistant. Search the web and X when relevant. Provide an accurate and concise answer in the same language as the user's query. Include direct source URLs whenever available. Never fabricate sources, URLs, or claims. If no reliable information is available, clearly state that no reliable information was found and briefly suggest how to verify it. Never return an empty response.";
+const FAST_INSTRUCTIONS: &str = "You are a web search assistant. Search the web and X when relevant. Provide an accurate and concise answer in the same language as the user's query. Include direct source URLs whenever available. Never fabricate sources, URLs, or claims. If no reliable information is available, clearly state that no reliable information was found and briefly suggest how to verify it. Never return an empty response.";
+const DEEP_INSTRUCTIONS: &str = "You are a deep research assistant. Conduct a comprehensive search of the web and X when relevant, and cross-check multiple reliable sources. Provide a detailed and well-structured answer in the same language as the user's query. Include direct source URLs whenever available, distinguish confirmed facts from uncertainty, and never fabricate sources, URLs, or claims. If no reliable information is available, clearly state that no reliable information was found and explain how to verify it. Never return an empty response.";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const ERROR_BODY_LIMIT: usize = 1_000;
 
@@ -32,11 +34,27 @@ impl GrokClient {
         })
     }
 
-    /// Grokに検索クエリを送り、回答本文のみを返します。
+    /// Grok 4.3 Fastに検索クエリを送り、回答本文のみを返します。
     pub async fn search(&self, query: &str) -> Result<String, String> {
+        self.search_with_model(FAST_MODEL, FAST_INSTRUCTIONS, query)
+            .await
+    }
+
+    /// Grok 4.20 Multi-Agent XHighで詳細な調査を実行します。
+    pub async fn deep_search(&self, query: &str) -> Result<String, String> {
+        self.search_with_model(DEEP_MODEL, DEEP_INSTRUCTIONS, query)
+            .await
+    }
+
+    async fn search_with_model(
+        &self,
+        model: &'static str,
+        instructions: &'static str,
+        query: &str,
+    ) -> Result<String, String> {
         let payload = ResponsesRequest {
-            model: MODEL,
-            instructions: INSTRUCTIONS,
+            model,
+            instructions,
             input: query,
             // 上流から継続的にイベントを受信し、ゲートウェイの待機タイムアウトを防ぎます。
             stream: true,
@@ -238,13 +256,24 @@ fn truncate(text: &str, max_chars: usize) -> String {
 mod tests {
     use serde_json::json;
 
-    use super::{INSTRUCTIONS, StreamControl, extract_answer, process_stream_event, truncate};
+    use super::{
+        DEEP_INSTRUCTIONS, DEEP_MODEL, FAST_INSTRUCTIONS, FAST_MODEL, StreamControl,
+        extract_answer, process_stream_event, truncate,
+    };
+
+    #[test]
+    fn upstream_models_are_fixed() {
+        assert_eq!(FAST_MODEL, "grok-4.3-fast");
+        assert_eq!(DEEP_MODEL, "grok-4.20-multi-agent-xhigh");
+    }
 
     #[test]
     fn upstream_instructions_are_english() {
-        assert!(INSTRUCTIONS.is_ascii());
-        assert!(INSTRUCTIONS.contains("same language as the user's query"));
-        assert!(INSTRUCTIONS.contains("Never return an empty response"));
+        for instructions in [FAST_INSTRUCTIONS, DEEP_INSTRUCTIONS] {
+            assert!(instructions.is_ascii());
+            assert!(instructions.contains("same language as the user's query"));
+            assert!(instructions.contains("Never return an empty response"));
+        }
     }
 
     #[test]

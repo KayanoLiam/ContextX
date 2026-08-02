@@ -2,7 +2,7 @@
 
 [日本語](README.md) | **简体中文**
 
-contextX 是一个使用 Grok 4.3 Fast 进行联网搜索的远程 MCP 服务。
+contextX 是一个同时提供 Grok 4.3 Fast 普通搜索和 Grok 4.20 Multi-Agent XHigh 深度搜索的远程 MCP 服务。
 
 服务通过 OpenAI 兼容的 Responses API，以流式方式将 MCP 客户端提交的查询发送给上游，并将最终回答作为 MCP 工具结果返回。持续接收上游数据可以减少搜索过程中出现的网关等待超时。用户无法自行更改模型。
 
@@ -130,9 +130,11 @@ MCP_ALLOWED_HOSTS=localhost,127.0.0.1,::1,mcp.twitter.monster
 
 ## MCP 工具
 
+公共服务中的两个工具均无需认证，并且不限制调用次数。用户不需要修改模型或配置文件，只需根据需求选择普通搜索或深度搜索。
+
 ### `grok_search`
 
-使用 Grok 4.3 Fast 进行联网搜索并回答问题。
+使用 Grok 4.3 Fast 执行高速普通搜索，适合日常问题和简单信息查询。
 
 输入示例：
 
@@ -141,6 +143,20 @@ MCP_ALLOWED_HOSTS=localhost,127.0.0.1,::1,mcp.twitter.monster
   "query": "查询 Rust 当前最新稳定版本"
 }
 ```
+
+### `grok_deep_search`
+
+使用 Grok 4.20 Multi-Agent XHigh 执行全面的深度搜索。它比普通搜索耗时更长，适合需要详细调查和多来源对比的问题。
+
+输入示例：
+
+```json
+{
+  "query": "对 Rust 异步运行时进行深度调查，并比较多个信息来源"
+}
+```
+
+在 MCP 客户端中明确说明“请使用深度搜索”，即可让 Agent 选择深度搜索工具。
 
 ## 安全说明
 

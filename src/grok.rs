@@ -8,6 +8,8 @@ use serde_json::Value;
 
 /// 利用者からモデルを変更できないよう、上流モデルを固定します。
 const MODEL: &str = "grok-4.3-fast";
+/// 上流モデルへの固定指示は英語で記述し、利用者の入力言語で回答させます。
+const INSTRUCTIONS: &str = "You are a web search assistant. Search the web and X when relevant. Provide an accurate and concise answer in the same language as the user's query. Include direct source URLs whenever available. Never fabricate sources, URLs, or claims.";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const ERROR_BODY_LIMIT: usize = 1_000;
 
@@ -34,6 +36,7 @@ impl GrokClient {
     pub async fn search(&self, query: &str) -> Result<String, String> {
         let payload = ResponsesRequest {
             model: MODEL,
+            instructions: INSTRUCTIONS,
             input: query,
             // 上流から継続的にイベントを受信し、ゲートウェイの待機タイムアウトを防ぎます。
             stream: true,
@@ -82,6 +85,7 @@ impl GrokClient {
 #[derive(Debug, Serialize)]
 struct ResponsesRequest<'a> {
     model: &'static str,
+    instructions: &'static str,
     input: &'a str,
     stream: bool,
 }
@@ -234,7 +238,13 @@ fn truncate(text: &str, max_chars: usize) -> String {
 mod tests {
     use serde_json::json;
 
-    use super::{StreamControl, extract_answer, process_stream_event, truncate};
+    use super::{INSTRUCTIONS, StreamControl, extract_answer, process_stream_event, truncate};
+
+    #[test]
+    fn upstream_instructions_are_english() {
+        assert!(INSTRUCTIONS.is_ascii());
+        assert!(INSTRUCTIONS.contains("same language as the user's query"));
+    }
 
     #[test]
     fn extracts_output_text() {

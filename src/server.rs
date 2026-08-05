@@ -12,11 +12,13 @@ pub async fn run(config: AppConfig) -> Result<(), Box<dyn Error>> {
     let AppConfig {
         api_key,
         upstream_url,
+        deep_api_key,
+        deep_upstream_url,
         bind_addr,
         allowed_hosts,
     } = config;
 
-    let grok_client = GrokClient::new(api_key, upstream_url)?;
+    let grok_client = GrokClient::new(api_key, upstream_url, deep_api_key, deep_upstream_url)?;
     let service: StreamableHttpService<ContextXServer, LocalSessionManager> =
         StreamableHttpService::new(
             move || Ok(ContextXServer::new(grok_client.clone())),

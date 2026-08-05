@@ -7,6 +7,8 @@ const DEFAULT_ALLOWED_HOSTS: &str = "localhost,127.0.0.1,::1";
 pub struct AppConfig {
     pub api_key: Arc<str>,
     pub upstream_url: Arc<str>,
+    pub deep_api_key: Arc<str>,
+    pub deep_upstream_url: Arc<str>,
     pub bind_addr: String,
     pub allowed_hosts: Vec<String>,
 }
@@ -22,6 +24,12 @@ impl AppConfig {
         let upstream_url = env::var("GROK_UPSTREAM_URL")
             .map_err(|_| ConfigError::MissingVariable("GROK_UPSTREAM_URL"))?
             .into();
+        let deep_api_key = env::var("GROK_DEEP_API_KEY")
+            .map_err(|_| ConfigError::MissingVariable("GROK_DEEP_API_KEY"))?
+            .into();
+        let deep_upstream_url = env::var("GROK_DEEP_UPSTREAM_URL")
+            .map_err(|_| ConfigError::MissingVariable("GROK_DEEP_UPSTREAM_URL"))?
+            .into();
         let bind_addr = env::var("BIND_ADDR").unwrap_or_else(|_| DEFAULT_BIND_ADDR.to_owned());
         let allowed_hosts = env::var("MCP_ALLOWED_HOSTS")
             .unwrap_or_else(|_| DEFAULT_ALLOWED_HOSTS.to_owned())
@@ -34,6 +42,8 @@ impl AppConfig {
         Ok(Self {
             api_key,
             upstream_url,
+            deep_api_key,
+            deep_upstream_url,
             bind_addr,
             allowed_hosts,
         })

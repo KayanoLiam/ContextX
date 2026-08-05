@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.idea
+target
+PERFORMANCE_ROADMAP.md
+README.md
+README.zh-CN.md

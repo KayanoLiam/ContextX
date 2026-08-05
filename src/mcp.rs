@@ -35,7 +35,7 @@ impl ContextXServer {
 
 #[tool_router]
 impl ContextXServer {
-    #[tool(description = "Grok 4.3 Fastでウェブ検索し、質問に回答します")]
+    #[tool(description = "Grok 4.3でウェブ検索し、質問に回答します")]
     async fn grok_search(
         &self,
         Parameters(params): Parameters<SearchParams>,
@@ -55,7 +55,7 @@ impl ContextXServer {
     }
 
     #[tool(
-        description = "Grok 4.20 Multi-Agent XHighで包括的な深度検索を実行します。利用者が深度検索を明示的に要求した場合に使用します"
+        description = "Grok 4.20 Multi-Agent 0309で包括的な深度検索を実行します。利用者が深度検索を明示的に要求した場合に使用します"
     )]
     async fn grok_deep_search(
         &self,
@@ -85,7 +85,7 @@ impl ServerHandler for ContextXServer {
                     .with_title("contextX Grok検索"),
             )
             .with_instructions(
-                "通常検索にはGrok 4.3 Fastを使用します。利用者が深度検索を明示的に要求した場合は、Grok 4.20 Multi-Agent XHighによる深度検索を使用します。",
+                "通常検索にはGrok 4.3を使用します。利用者が深度検索を明示的に要求した場合は、Grok 4.20 Multi-Agent 0309による深度検索を使用します。",
             )
     }
 }

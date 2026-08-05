@@ -2,7 +2,7 @@
 
 [日本語](README.md) | **简体中文**
 
-contextX 是一个同时提供 Grok 4.3 Fast 普通搜索和 Grok 4.20 Multi-Agent XHigh 深度搜索的远程 MCP 服务。
+contextX 是一个同时提供 Grok 4.3 普通搜索和 Grok 4.20 Multi-Agent 0309 深度搜索的远程 MCP 服务。
 
 服务通过 OpenAI 兼容的 Responses API，以流式方式将 MCP 客户端提交的查询发送给上游，并将最终回答作为 MCP 工具结果返回。持续接收上游数据可以减少搜索过程中出现的网关等待超时。用户无法自行更改模型。
 
@@ -98,6 +98,8 @@ cp .env.example .env
 ```env
 GROK_API_KEY=your-api-key
 GROK_UPSTREAM_URL=https://your-upstream.example/v1/responses
+GROK_DEEP_API_KEY=your-deep-search-api-key
+GROK_DEEP_UPSTREAM_URL=https://your-deep-upstream.example/v1/responses
 ```
 
 ### 启动
@@ -117,8 +119,10 @@ Health: http://127.0.0.1:3000/health
 
 | 变量 | 必填 | 说明 |
 |---|---:|---|
-| `GROK_API_KEY` | 是 | 上游 API 的 Bearer Token |
-| `GROK_UPSTREAM_URL` | 是 | OpenAI 兼容的 Responses API 地址，源代码中不提供默认值 |
+| `GROK_API_KEY` | 是 | 普通搜索上游 API 的 Bearer Token |
+| `GROK_UPSTREAM_URL` | 是 | 普通搜索上游的 Responses API 地址 |
+| `GROK_DEEP_API_KEY` | 是 | 深度搜索上游 API 的 Bearer Token |
+| `GROK_DEEP_UPSTREAM_URL` | 是 | 深度搜索上游的 Responses API 地址 |
 | `BIND_ADDR` | 否 | 服务监听地址，默认为 `0.0.0.0:3000` |
 | `MCP_ALLOWED_HOSTS` | 否 | 允许访问的 Host，使用英文逗号分隔 |
 
@@ -134,7 +138,7 @@ MCP_ALLOWED_HOSTS=localhost,127.0.0.1,::1,mcp.twitter.monster
 
 ### `grok_search`
 
-使用 Grok 4.3 Fast 执行高速普通搜索，适合日常问题和简单信息查询。
+使用 Grok 4.3 执行高速普通搜索，适合日常问题和简单信息查询。
 
 输入示例：
 
@@ -146,7 +150,7 @@ MCP_ALLOWED_HOSTS=localhost,127.0.0.1,::1,mcp.twitter.monster
 
 ### `grok_deep_search`
 
-使用 Grok 4.20 Multi-Agent XHigh 执行全面的深度搜索。它比普通搜索耗时更长，适合需要详细调查和多来源对比的问题。
+使用 Grok 4.20 Multi-Agent 0309 执行全面的深度搜索。它比普通搜索耗时更长，适合需要详细调查和多来源对比的问题。
 
 输入示例：
 

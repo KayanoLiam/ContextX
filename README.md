@@ -2,7 +2,7 @@
 
 **日本語** | [简体中文](README.zh-CN.md)
 
-contextXは、Grok 4.3 Fastによる通常検索とGrok 4.20 Multi-Agent XHighによる深度検索を提供するリモートMCPサーバーです。
+contextXは、Grok 4.3による通常検索とGrok 4.20 Multi-Agent 0309による深度検索を提供するリモートMCPサーバーです。
 
 MCPクライアントから受け取った検索クエリをOpenAI互換のResponses APIへストリーミング送信し、回答本文をMCPのツール結果として返します。上流ストリームを継続的に受信することで、検索処理中に発生するゲートウェイの待機タイムアウトを抑制します。利用者がモデルを変更することはできません。
 
@@ -98,6 +98,8 @@ cp .env.example .env
 ```env
 GROK_API_KEY=your-api-key
 GROK_UPSTREAM_URL=https://your-upstream.example/v1/responses
+GROK_DEEP_API_KEY=your-deep-search-api-key
+GROK_DEEP_UPSTREAM_URL=https://your-deep-upstream.example/v1/responses
 ```
 
 ### 起動
@@ -117,8 +119,10 @@ Health: http://127.0.0.1:3000/health
 
 | 変数 | 必須 | 説明 |
 |---|---:|---|
-| `GROK_API_KEY` | はい | 上流APIのBearerトークン |
-| `GROK_UPSTREAM_URL` | はい | OpenAI互換のResponses APIエンドポイント。ソースコード内に既定値はありません |
+| `GROK_API_KEY` | はい | 通常検索上流APIのBearerトークン |
+| `GROK_UPSTREAM_URL` | はい | 通常検索上流のResponses APIエンドポイント |
+| `GROK_DEEP_API_KEY` | はい | 深度検索上流APIのBearerトークン |
+| `GROK_DEEP_UPSTREAM_URL` | はい | 深度検索上流のResponses APIエンドポイント |
 | `BIND_ADDR` | いいえ | サーバーの待受アドレス。デフォルトは`0.0.0.0:3000` |
 | `MCP_ALLOWED_HOSTS` | いいえ | 受け入れるHostのカンマ区切りリスト |
 
@@ -134,7 +138,7 @@ MCP_ALLOWED_HOSTS=localhost,127.0.0.1,::1,mcp.twitter.monster
 
 ### `grok_search`
 
-Grok 4.3 Fastで高速な通常検索を実行します。日常的な質問や簡単な情報確認に適しています。
+Grok 4.3で高速な通常検索を実行します。日常的な質問や簡単な情報確認に適しています。
 
 入力例：
 
@@ -146,7 +150,7 @@ Grok 4.3 Fastで高速な通常検索を実行します。日常的な質問や�
 
 ### `grok_deep_search`
 
-Grok 4.20 Multi-Agent XHighで包括的な深度検索を実行します。通常検索より時間がかかるため、詳細な調査が必要な場合に使用してください。
+Grok 4.20 Multi-Agent 0309で包括的な深度検索を実行します。通常検索より時間がかかるため、詳細な調査が必要な場合に使用してください。
 
 入力例：
 

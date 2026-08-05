@@ -7,8 +7,8 @@ use serde::Serialize;
 use serde_json::Value;
 
 /// 利用者からモデルを変更できないよう、各検索機能の上流モデルを固定します。
-const FAST_MODEL: &str = "grok-4.3-fast";
-const DEEP_MODEL: &str = "grok-4.20-multi-agent-xhigh";
+const FAST_MODEL: &str = "grok-4.3";
+const DEEP_MODEL: &str = "grok-4.20-multi-agent-0309";
 /// 上流モデルへの固定指示は英語で記述し、利用者の入力言語で回答させます。
 const FAST_INSTRUCTIONS: &str = "You are a web search assistant. Search the web and X when relevant. Provide an accurate and concise answer in the same language as the user's query. Include direct source URLs whenever available. Never fabricate sources, URLs, or claims. If no reliable information is available, clearly state that no reliable information was found and briefly suggest how to verify it. Never return an empty response.";
 const DEEP_INSTRUCTIONS: &str = "You are a deep research assistant. Conduct a comprehensive search of the web and X when relevant, and cross-check multiple reliable sources. Provide a detailed and well-structured answer in the same language as the user's query. Include direct source URLs whenever available, distinguish confirmed facts from uncertainty, and never fabricate sources, URLs, or claims. If no reliable information is available, clearly state that no reliable information was found and explain how to verify it. Never return an empty response.";
@@ -19,35 +19,53 @@ const ERROR_BODY_LIMIT: usize = 1_000;
 #[derive(Clone)]
 pub struct GrokClient {
     client: Client,
+    standard: Upstream,
+    deep: Upstream,
+}
+
+#[derive(Clone)]
+struct Upstream {
     api_key: Arc<str>,
-    upstream_url: Arc<str>,
+    url: Arc<str>,
 }
 
 impl GrokClient {
-    pub fn new(api_key: Arc<str>, upstream_url: Arc<str>) -> Result<Self, reqwest::Error> {
+    pub fn new(
+        api_key: Arc<str>,
+        upstream_url: Arc<str>,
+        deep_api_key: Arc<str>,
+        deep_upstream_url: Arc<str>,
+    ) -> Result<Self, reqwest::Error> {
         let client = Client::builder().timeout(REQUEST_TIMEOUT).build()?;
 
         Ok(Self {
             client,
-            api_key,
-            upstream_url,
+            standard: Upstream {
+                api_key,
+                url: upstream_url,
+            },
+            deep: Upstream {
+                api_key: deep_api_key,
+                url: deep_upstream_url,
+            },
         })
     }
 
-    /// Grok 4.3 Fastに検索クエリを送り、回答本文のみを返します。
+    /// Grok 4.3に検索クエリを送り、回答本文のみを返します。
     pub async fn search(&self, query: &str) -> Result<String, String> {
-        self.search_with_model(FAST_MODEL, FAST_INSTRUCTIONS, query)
+        self.search_with_model(&self.standard, FAST_MODEL, FAST_INSTRUCTIONS, query)
             .await
     }
 
-    /// Grok 4.20 Multi-Agent XHighで詳細な調査を実行します。
+    /// Grok 4.20 Multi-Agent 0309で詳細な調査を実行します。
     pub async fn deep_search(&self, query: &str) -> Result<String, String> {
-        self.search_with_model(DEEP_MODEL, DEEP_INSTRUCTIONS, query)
+        self.search_with_model(&self.deep, DEEP_MODEL, DEEP_INSTRUCTIONS, query)
             .await
     }
 
     async fn search_with_model(
         &self,
+        upstream: &Upstream,
         model: &'static str,
         instructions: &'static str,
         query: &str,
@@ -62,8 +80,8 @@ impl GrokClient {
 
         let response = self
             .client
-            .post(self.upstream_url.as_ref())
-            .bearer_auth(self.api_key.as_ref())
+            .post(upstream.url.as_ref())
+            .bearer_auth(upstream.api_key.as_ref())
             .header("Accept", "text/event-stream")
             .json(&payload)
             .send()
@@ -254,17 +272,79 @@ fn truncate(text: &str, max_chars: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use std::sync::{Arc, Mutex};
+
+    use axum::{Json, Router, http::HeaderMap, routing::post};
+    use serde_json::{Value, json};
 
     use super::{
-        DEEP_INSTRUCTIONS, DEEP_MODEL, FAST_INSTRUCTIONS, FAST_MODEL, StreamControl,
+        DEEP_INSTRUCTIONS, DEEP_MODEL, FAST_INSTRUCTIONS, FAST_MODEL, GrokClient, StreamControl,
         extract_answer, process_stream_event, truncate,
     };
 
     #[test]
     fn upstream_models_are_fixed() {
-        assert_eq!(FAST_MODEL, "grok-4.3-fast");
-        assert_eq!(DEEP_MODEL, "grok-4.20-multi-agent-xhigh");
+        assert_eq!(FAST_MODEL, "grok-4.3");
+        assert_eq!(DEEP_MODEL, "grok-4.20-multi-agent-0309");
+    }
+
+    #[tokio::test]
+    async fn search_modes_use_separate_upstreams() {
+        let requests = Arc::new(Mutex::new(Vec::<(String, Value)>::new()));
+        let standard_requests = Arc::clone(&requests);
+        let deep_requests = Arc::clone(&requests);
+        let app = Router::new()
+            .route(
+                "/standard",
+                post(move |headers: HeaderMap, Json(payload): Json<Value>| {
+                    let requests = Arc::clone(&standard_requests);
+                    async move {
+                        requests.lock().unwrap().push((
+                            headers["authorization"].to_str().unwrap().to_owned(),
+                            payload,
+                        ));
+                        Json(json!({ "output_text": "standard answer" }))
+                    }
+                }),
+            )
+            .route(
+                "/deep",
+                post(move |headers: HeaderMap, Json(payload): Json<Value>| {
+                    let requests = Arc::clone(&deep_requests);
+                    async move {
+                        requests.lock().unwrap().push((
+                            headers["authorization"].to_str().unwrap().to_owned(),
+                            payload,
+                        ));
+                        Json(json!({ "output_text": "deep answer" }))
+                    }
+                }),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let client = GrokClient::new(
+            Arc::from("standard-key"),
+            Arc::from(format!("http://{address}/standard")),
+            Arc::from("deep-key"),
+            Arc::from(format!("http://{address}/deep")),
+        )
+        .unwrap();
+
+        let standard_answer = client.search("standard query").await;
+        let deep_answer = client.deep_search("deep query").await;
+        server.abort();
+
+        assert_eq!(standard_answer.as_deref(), Ok("standard answer"));
+        assert_eq!(deep_answer.as_deref(), Ok("deep answer"));
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0].0, "Bearer standard-key");
+        assert_eq!(requests[0].1["model"], FAST_MODEL);
+        assert_eq!(requests[1].0, "Bearer deep-key");
+        assert_eq!(requests[1].1["model"], DEEP_MODEL);
     }
 
     #[test]

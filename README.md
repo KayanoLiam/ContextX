@@ -1,6 +1,6 @@
 # contextX
 
-**日本語** | [简体中文](README.zh-CN.md)
+**日本語** | [简体中文](README.zh-CN.md) | [English](README.en.md)
 
 contextXは、Grok 4.3による通常検索とGrok 4.20 Multi-Agent 0309による深度検索を提供するリモートMCPサーバーです。
 

@@ -1,6 +1,6 @@
 # contextX
 
-[日本語](README.md) | **简体中文**
+[日本語](README.md) | **简体中文** | [English](README.en.md)
 
 contextX 是一个同时提供 Grok 4.3 普通搜索和 Grok 4.20 Multi-Agent 0309 深度搜索的远程 MCP 服务。
 

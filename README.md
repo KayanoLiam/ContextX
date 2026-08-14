@@ -40,6 +40,24 @@ Piで接続を確認します。
 /mcp reconnect contextX
 ```
 
+#### Pi Subagents
+
+`pi-subagents`で`tools`を宣言した子エージェントは厳格な許可リストを使用するため、親エージェントのMCPツールを自動継承しません。ウェブアクセスが必要なagent定義へ`mcp:contextX`を追加するか、`~/.pi/agent/settings.json`で組み込みagentを上書きしてください。
+
+```json
+{
+  "subagents": {
+    "agentOverrides": {
+      "researcher": {
+        "tools": ["read", "write", "intercom", "mcp:contextX"]
+      }
+    }
+  }
+}
+```
+
+ウェブアクセスが必要な他のagentにも`mcp:contextX`を追加します。最初に`/mcp reconnect contextX`でツールキャッシュを作成してからPiを再起動してください。子エージェントでは`contextX_grok_search`と`contextX_grok_deep_search`を直接利用できます。
+
 ### Claude Code
 
 ```bash

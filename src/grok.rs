@@ -74,6 +74,8 @@ impl GrokClient {
             model,
             instructions,
             input: query,
+            // 指示文だけではモデルに検索能力は付与されないため、上流の検索ツールを明示します。
+            tools: [SearchTool::WebSearch, SearchTool::XSearch],
             // 上流から継続的にイベントを受信し、ゲートウェイの待機タイムアウトを防ぎます。
             stream: true,
         };
@@ -123,7 +125,15 @@ struct ResponsesRequest<'a> {
     model: &'static str,
     instructions: &'static str,
     input: &'a str,
+    tools: [SearchTool; 2],
     stream: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum SearchTool {
+    WebSearch,
+    XSearch,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -343,8 +353,16 @@ mod tests {
         assert_eq!(requests.len(), 2);
         assert_eq!(requests[0].0, "Bearer standard-key");
         assert_eq!(requests[0].1["model"], FAST_MODEL);
+        assert_eq!(
+            requests[0].1["tools"],
+            json!([{ "type": "web_search" }, { "type": "x_search" }])
+        );
         assert_eq!(requests[1].0, "Bearer deep-key");
         assert_eq!(requests[1].1["model"], DEEP_MODEL);
+        assert_eq!(
+            requests[1].1["tools"],
+            json!([{ "type": "web_search" }, { "type": "x_search" }])
+        );
     }
 
     #[test]

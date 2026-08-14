@@ -40,6 +40,24 @@ Check the connection in Pi:
 /mcp reconnect contextX
 ```
 
+#### Pi Subagents
+
+Subagents that declare `tools` in `pi-subagents` use a strict allowlist and do not automatically inherit MCP tools from the parent. Add `mcp:contextX` to every agent that needs web access, or override a built-in agent in `~/.pi/agent/settings.json`:
+
+```json
+{
+  "subagents": {
+    "agentOverrides": {
+      "researcher": {
+        "tools": ["read", "write", "intercom", "mcp:contextX"]
+      }
+    }
+  }
+}
+```
+
+Repeat the `mcp:contextX` entry for other agents that need web access. Run `/mcp reconnect contextX` once to populate the tool cache, then restart Pi. The child receives `contextX_grok_search` and `contextX_grok_deep_search` as direct tools.
+
 ### Claude Code
 
 ```bash

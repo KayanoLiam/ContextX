@@ -40,6 +40,24 @@ pi install npm:pi-mcp-adapter
 /mcp reconnect contextX
 ```
 
+#### Pi Subagents
+
+`pi-subagents` 中声明了 `tools` 的子代理使用严格白名单，不会自动继承主代理的 MCP 工具。请在需要联网的 agent 定义中加入 `mcp:contextX`，或通过 `~/.pi/agent/settings.json` 覆盖内置 agent：
+
+```json
+{
+  "subagents": {
+    "agentOverrides": {
+      "researcher": {
+        "tools": ["read", "write", "intercom", "mcp:contextX"]
+      }
+    }
+  }
+}
+```
+
+对其他需要联网的 agent 重复添加 `mcp:contextX`。先执行 `/mcp reconnect contextX` 填充工具缓存，再重启 Pi；子代理将获得 `contextX_grok_search` 和 `contextX_grok_deep_search` 两个直接工具。
+
 ### Claude Code
 
 ```bash
